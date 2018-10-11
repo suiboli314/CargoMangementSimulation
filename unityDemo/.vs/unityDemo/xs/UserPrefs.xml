@@ -1,0 +1,15 @@
+﻿<Properties StartupConfiguration="{001D61BF-F79C-6967-0F02-8F584207FCCB}|">
+  <MonoDevelop.Ide.ItemProperties.Assembly-CSharp PreferredExecutionTarget="Unity.Editor" />
+  <MonoDevelop.Ide.Workbench ActiveDocument="Assets/Scripts/TacticsMove.cs">
+    <Files>
+      <File FileName="Assets/Scripts/NPCMove.cs" Line="30" Column="36" />
+      <File FileName="Assets/Scripts/TacticsMove.cs" Line="385" Column="1" />
+    </Files>
+  </MonoDevelop.Ide.Workbench>
+  <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" />
+  <MonoDevelop.Ide.DebuggingService.Breakpoints>
+    <BreakpointStore />
+  </MonoDevelop.Ide.DebuggingService.Breakpoints>
+  <MonoDevelop.Ide.DebuggingService.PinnedWatches />
+  <MultiItemStartupConfigurations />
+</Properties>
