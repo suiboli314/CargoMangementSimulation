@@ -5,5 +5,4 @@ using MLAgents;
 
 public class EscapeAcademy : Academy {
 
-
 }

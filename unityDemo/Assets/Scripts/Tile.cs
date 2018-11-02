@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class Tile : MonoBehaviour 
 {
-    public bool walkable = true;
+    public bool walkable = false;
     public bool current = false;
     public bool target = false;
     public bool selectable = false;
@@ -81,14 +81,15 @@ public class Tile : MonoBehaviour
         foreach (Collider item in colliders)
         {
             Tile tile = item.GetComponent<Tile>();
-            if (tile != null && tile.walkable)
+            if (tile != null)
             {
                 RaycastHit hit;
 
                 if (!Physics.Raycast(tile.transform.position, Vector3.up, out hit, 1) || (tile == target))
                 {
-                    adjacencyList.Add(tile);
+                    tile.walkable = true;
                 }
+                adjacencyList.Add(tile);
             }
         }
     }

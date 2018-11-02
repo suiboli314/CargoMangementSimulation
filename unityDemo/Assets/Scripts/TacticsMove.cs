@@ -1,8 +1,8 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
+using MLAgents;
 
-public class TacticsMove : MonoBehaviour 
+public class TacticsMove : Agent 
 {
     public bool turn = false;
 
@@ -37,6 +37,7 @@ public class TacticsMove : MonoBehaviour
         halfHeight = GetComponent<Collider>().bounds.extents.y;
 
         TurnManager.AddUnit(this);
+
     }
 
     public void GetCurrentTile()
@@ -333,6 +334,8 @@ public class TacticsMove : MonoBehaviour
         List<Tile> closedList = new List<Tile>();
 
         openList.Add(currentTile);
+        Debug.Log("current"+currentTile.transform.position);
+        Debug.Log("target"+target.transform.position);
         //currentTile.parent = ??
         currentTile.h = Vector3.Distance(currentTile.transform.position, target.transform.position);
         currentTile.f = currentTile.h;
