@@ -1,4 +1,6 @@
-﻿using UnityEngine;
+﻿using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
 using MLAgents;
 
 public class PlayerMove : TacticsMove
@@ -10,6 +12,7 @@ public class PlayerMove : TacticsMove
     float last_dist = 14;
     float net_dist_change = 0;
     float net_dist_ratio = 1;
+    bool twice = false;
 
     // Use this for initialization
     void Start()
@@ -21,31 +24,14 @@ public class PlayerMove : TacticsMove
     {
 
         if (!turn)
-        {
             return;
-        }
+        
 
-        if (!moving)
+        if (moving)
         {
-            FindSelectableTiles();
-
-            if (mode == 0)
-            {
-                RequestDecision();  //call for external training
-                moving = true;
-            }
-            else
-            {
-                RequestAction(); //call for internal decision
-                moving = true;
-            }
-
-        }else
-        {
-
             float step = speed * Time.deltaTime;
             transform.position = Vector3.MoveTowards(transform.position, target.transform.position, step);
-            if (Vector3.Distance(transform.position, target.transform.position) <= 0.001)
+            if (Vector3.Distance(transform.position, target.transform.position) <= 0.1)
             {
                 moving = false;
                 TurnManager.EndTurn();
@@ -54,42 +40,16 @@ public class PlayerMove : TacticsMove
 
     }
 
-    //// Update is called once per frame
-    //void Update()
-    //{
-    //    Debug.DrawRay(transform.position, transform.forward);
-
-    //    if (!turn)
-    //    {
-    //        return;
-    //    }
-
-    //    if (!moving)
-    //    {
-
-    //        if (mode == 1)
-    //        {
-    //            //FindSelectableTiles();
-    //            //CheckMouse();
-    //        }
-    //        else
-    //        {
-    //            RequestDecision();
-    //            CalculatePath();
-    //            FindSelectableTiles();
-    //            actualTargetTile.target = true;
-    //        }
-
-    //    }
-    //    else
-    //    {
-    //        Move();
-    //    }
-    //}
-
     public override void AgentReset()
     {
         this.transform.position = new Vector3(-2.5f, 1.4f, 2.5f);
+        moving = false;
+        twice = !twice;
+
+        if (!twice)
+            TurnManager.EndTurn();
+        // FindObjectOfType<Academy>().Done();
+    
     }
 
     //void CheckMouse()
@@ -163,7 +123,7 @@ public class PlayerMove : TacticsMove
             float d = Vector3.Distance(npc.transform.position, obj.transform.position);
 
             //when reach one goal
-            if (System.Math.Abs(d) < 0.0001)
+            if (System.Math.Abs(d) < 0.1)
                 isGoalReached[i] = true;
 
             i++;
@@ -172,57 +132,86 @@ public class PlayerMove : TacticsMove
 
     public override void AgentAction(float[] vectorAction, string textAction)
     {
-        isNPCReachGoal();
+        if (!turn)
+            return;
 
-        GameObject player = GameObject.FindGameObjectWithTag("Player");
-        GameObject npc = GameObject.FindGameObjectWithTag("NPC");
-        float distance = 14;
-
-        float d = Vector3.Distance(this.transform.position, npc.transform.position);
-        if (System.Math.Abs(d) < 0.0001)
-            distance = 0f;
-
-        //reward
-        net_dist_change = last_dist - distance;
-        net_dist_ratio = -distance / last_dist;
-        last_dist = distance;
-
-
-        AddReward(0.8f * net_dist_change / 13 + 0.2f * Mathf.Exp(net_dist_ratio));
-
-        //punishment for reaching too close to player
-        if (Vector3.Distance(npc.transform.position, this.transform.position) <= 2)
-            AddReward(0.4f);
-
-        if (this.transform.position.x < -5.5 || this.transform.position.x > 5.5 || this.transform.position.z < -5.5 || this.transform.position.z > 5.5)
-            AddReward(-1f);
-        FindObjectOfType<Academy>().Done();
-
-        if (GetTargetTile(player).walkable == false)
+        if(!moving)
         {
-            AddReward(-1f);
-            FindObjectOfType<Academy>().Done();
+            if (this.transform.position.x < -5.5 || this.transform.position.x > 5.5 || this.transform.position.z < -5.5 || this.transform.position.z > 5.5)
+            {
+                AddReward(-1f);
+                Done();
+                return;
+            }
+
+            FindSelectableTiles();
+
+            isNPCReachGoal();
+
+            GameObject player = GameObject.FindGameObjectWithTag("Player");
+            GameObject npc = GameObject.FindGameObjectWithTag("NPC");
+            float distance = 14;
+
+            float d = Vector3.Distance(this.transform.position, npc.transform.position);
+            if (System.Math.Abs(d) < 0.1)
+                distance = 0f;
+
+            //reward
+            net_dist_change = last_dist - distance;
+            net_dist_ratio = -distance / last_dist;
+            last_dist = distance;
+
+
+            AddReward(0.8f * net_dist_change / 13 + 0.2f * Mathf.Exp(net_dist_ratio));
+
+            //punishment for reaching too close to player
+            if (Vector3.Distance(npc.transform.position, this.transform.position) <= 2)
+                AddReward(0.4f);
+
+            // RaycastHit hit;
+            // if (Physics.Raycast(transform.position, Vector3.up, out hit, 1))
+            // {
+            //     AddReward(-1f);
+            //     Done();
+            // }
+
+            GameObject[] obs = GameObject.FindGameObjectsWithTag("Obstacle");
+            foreach (GameObject obj in obs)
+            {
+                Vector3 a = transform.position;
+                Vector3 b = obj.transform.position;
+                a.y = b.y;
+
+                if (System.Math.Abs(Vector3.Distance(a, b)) < 0.1)
+                {
+                    AddReward(-1f);
+                    Done();
+                    return;
+                }
+            }
+
+
+            //reaches goals
+            if (System.Math.Abs(last_dist) < 0.1)
+            {
+                AddReward(1f);
+                Done();
+                return;
+            }
+
+            // Time penalty
+            AddReward(-0.02f);
+
+            //Action
+            int movement = Mathf.FloorToInt(vectorAction[0]);
+
+            Vector3 change = new Vector3(0, 0, 0);
+            if (movement == 0) { change = new Vector3(-1, 0, 0); }
+            if (movement == 1) { change = new Vector3(1, 0, 0); }
+            if (movement == 2) { change = new Vector3(0, 0, -1); }
+            if (movement == 3) { change = new Vector3(0, 0, 1); }
+            player.transform.position += change;
+            target.transform.position = player.transform.position;
         }
-
-        //reaches goals
-        if (System.Math.Abs(last_dist) < 0.0001)
-        {
-            AddReward(1f);
-            FindObjectOfType<Academy>().Done();
-        }
-
-        // Time penalty
-        AddReward(-0.05f);
-
-        //Action
-        int movement = Mathf.FloorToInt(vectorAction[0]);
-
-        Vector3 change = new Vector3(0, 0, 0);
-        if (movement == 0) { change = new Vector3(-1, 0, 0); }
-        if (movement == 1) { change = new Vector3(1, 0, 0); }
-        if (movement == 2) { change = new Vector3(0, 0, -1); }
-        if (movement == 3) { change = new Vector3(0, 0, 1); }
-        player.transform.position += change;
-        target.transform.position = player.transform.position;
     }
 }

@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
 public class TurnManager : MonoBehaviour 
@@ -71,10 +72,6 @@ public class TurnManager : MonoBehaviour
             if (!turnKey.Contains(unit.tag))
             {
                 turnKey.Enqueue(unit.tag);
-
-                // player has one more steps
-                if (unit.tag == "Player")
-                    turnKey.Enqueue(unit.tag);
             }
         }
         else
@@ -83,5 +80,6 @@ public class TurnManager : MonoBehaviour
         }
 
         list.Add(unit);
+
     }
 }

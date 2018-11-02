@@ -21,39 +21,20 @@ public class NPCMove : TacticsMove
 
     void Update()
     {
-
         if (!turn)
-        {
             return;
-        }
+        
 
-        if (!moving)
+        if (moving)
         {
-            FindSelectableTiles();
-
-            if (mode == 0)
-            {
-                RequestDecision();  //call for external training
-                moving = true;
-            }
-            else
-            {
-                RequestAction(); //call for internal decision
-                moving = true;
-            }
-
-        }
-        else
-        {
-
             float step = speed * Time.deltaTime;
             transform.position = Vector3.MoveTowards(transform.position, target.transform.position, step);
-            if (Vector3.Distance(transform.position, target.transform.position) <= 0.001)
+            
+            if (Vector3.Distance(transform.position, target.transform.position) <= 0.1)
             {
                 moving = false;
                 TurnManager.EndTurn();
             }
-
         }
 
     }
@@ -61,6 +42,11 @@ public class NPCMove : TacticsMove
     public override void AgentReset()
     {
         this.transform.position = new Vector3(2.5f, 1.4f, -0.5f);
+        moving = false;
+        if (turn)
+            TurnManager.EndTurn();
+
+        // FindObjectOfType<Academy>().Done();
     }
 
     public override void CollectObservations()
@@ -110,7 +96,7 @@ public class NPCMove : TacticsMove
             float d = Vector3.Distance(this.transform.position, obj.transform.position);
 
             //when reach one goal
-            if (System.Math.Abs(d) < 0.0001)
+            if (System.Math.Abs(d) < 0.1)
             {
                 isGoalReached[i] = true;
                 distance = 0f;
@@ -132,64 +118,98 @@ public class NPCMove : TacticsMove
 
     public override void AgentAction(float[] vectorAction, string textAction)
     {
+        
+        if (!turn)
+            return;
+        
 
-        if (this.transform.position.x < -5.5 || this.transform.position.x > 5.5 || this.transform.position.z < -5.5 || this.transform.position.z > 5.5)
-            AddReward(-1f);
-
-        FindObjectOfType<Academy>().Done();
-
-        FindNearestTarget();
-
-        //reward
-        AddReward(0.8f * net_dist_change / 13 + 0.2f * Mathf.Exp(net_dist_ratio));
-
-        //punishment for reaching too close to player
-        GameObject player = GameObject.FindGameObjectWithTag("Player");
-        GameObject npc = GameObject.FindGameObjectWithTag("NPC");
-
-
-        if (Vector3.Distance(transform.position, player.transform.position) <= 2)
-            AddReward(-0.4f);
-
-        if (GetTargetTile(npc).walkable == false)
+        if (!moving)
         {
-            AddReward(-1f);
-            FindObjectOfType<Academy>().Done();
-        }
-
-        //reaches goals
-        int i = 0;
-        int count = 0;
-        foreach (bool x in isGoalReached)
-        {
-            if (x)
+            moving = true;
+            if (this.transform.position.x < -5.5 || this.transform.position.x > 5.5 || this.transform.position.z < -5.5 || this.transform.position.z > 5.5)
             {
-                if (System.Math.Abs(last_dist) < 0.0001)
-                    AddReward(1f);
-                last_dist = 12; //reset prev_dist
-                count++;
+                AddReward(-1f);
+                Done();
+                return;
             }
-            if (i == 3)
-                break;
-            i++;
+            
+            FindSelectableTiles();
+
+            FindNearestTarget();
+
+            //reward
+            AddReward(0.8f * net_dist_change / 13 + 0.2f * Mathf.Exp(net_dist_ratio));
+
+            //punishment for reaching too close to player
+            GameObject player = GameObject.FindGameObjectWithTag("Player");
+            GameObject npc = GameObject.FindGameObjectWithTag("NPC");
+
+
+            if (Vector3.Distance(transform.position, player.transform.position) <= 2)
+                AddReward(-0.4f);
+
+            // RaycastHit hit;
+            // if (Physics.Raycast(transform.position, Vector3.up, out hit, 1))
+            // {
+            //     AddReward(-1f);
+            //     Done();
+            // }
+
+            GameObject[] obs = GameObject.FindGameObjectsWithTag("Obstacle");
+            foreach (GameObject obj in obs)
+            {
+                Vector3 a = transform.position;
+                Vector3 b = obj.transform.position;
+                a.y = b.y;
+
+                if (System.Math.Abs(Vector3.Distance(a, b)) < 0.1)
+                {
+                    AddReward(-1f);
+                    Done();
+                    return;
+                }
+            }
+
+            //reaches goals
+            int i = 0;
+            int count = 0;
+            foreach (bool x in isGoalReached)
+            {
+                if (x)
+                {
+                    if (System.Math.Abs(last_dist) < 0.1)
+                        AddReward(1f);
+                    last_dist = 12; //reset prev_dist
+                    count++;
+                }
+                if (i == 3)
+                    break;
+                i++;
+            }
+            //two goals are reached
+            if (count == 2)
+            {
+                Done();
+                return;
+            }
+            // Time penalty
+            AddReward(-0.02f);
+
+            //Action
+            int movement = Mathf.FloorToInt(vectorAction[0]);
+
+            Vector3 change = new Vector3(0, 0, 0);
+            if (movement == 0) { change = new Vector3(-1, 0, 0); }
+            if (movement == 1) { change = new Vector3(1, 0, 0); }
+            if (movement == 2) { change = new Vector3(0, 0, -1); }
+            if (movement == 3) { change = new Vector3(0, 0, 1); }
+            npc.transform.position += change;
+            target.transform.position = npc.transform.position;
+
+
+            transform.position =  target.transform.position;
+            
+
         }
-        //two goals are reached
-        if (count == 2)
-            FindObjectOfType<Academy>().Done();
-
-        // Time penalty
-        AddReward(-0.05f);
-
-        //Action
-        int movement = Mathf.FloorToInt(vectorAction[0]);
-
-        Vector3 change = new Vector3(0, 0, 0);
-        if (movement == 0) { change = new Vector3(-1, 0, 0); }
-        if (movement == 1) { change = new Vector3(1, 0, 0); }
-        if (movement == 2) { change = new Vector3(0, 0, -1); }
-        if (movement == 3) { change = new Vector3(0, 0, 1); }
-        npc.transform.position += change;
-        target.transform.position = npc.transform.position;
-
     }
 }
