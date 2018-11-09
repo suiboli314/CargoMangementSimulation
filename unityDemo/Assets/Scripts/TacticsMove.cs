@@ -108,8 +108,10 @@ public class TacticsMove : Agent
     public void MoveToTile(Tile tile)
     {
         path.Clear();
+        if (tile == null)
+            return;
         tile.target = true;
-        moving = true;
+        //moving = true;
 
         Tile next = tile;
         while (next != null)
@@ -326,7 +328,7 @@ public class TacticsMove : Agent
         return endTile;
     }
 
-    protected void FindPath(Tile target)
+    protected int FindPath(Tile target)
     {
         ComputeAdjacencyLists(jumpHeight, target);
         GetCurrentTile();
@@ -335,8 +337,8 @@ public class TacticsMove : Agent
         List<Tile> closedList = new List<Tile>();
 
         openList.Add(currentTile);
-        Debug.Log("current"+currentTile.transform.position);
-        Debug.Log("target"+target.transform.position);
+//        Debug.Log("current"+currentTile.transform.position);
+//        Debug.Log("target"+target.transform.position);
         //currentTile.parent = ??
         currentTile.h = Vector3.Distance(currentTile.transform.position, target.transform.position);
         currentTile.f = currentTile.h;
@@ -351,7 +353,7 @@ public class TacticsMove : Agent
             {
                 actualTargetTile = FindEndTile(t);
                 MoveToTile(actualTargetTile);
-                return;
+                return path.Count;
             }
 
             foreach (Tile tile in t.adjacencyList)
@@ -387,6 +389,7 @@ public class TacticsMove : Agent
 
         //todo - what do you do if there is no path to the target tile?
         Debug.Log("Path not found");
+        return 0;
     }
 
     public void BeginTurn()
