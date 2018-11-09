@@ -128,7 +128,7 @@ public class NPCMove : TacticsMove
             moving = true;
             if (this.transform.position.x < -5.5 || this.transform.position.x > 5.5 || this.transform.position.z < -5.5 || this.transform.position.z > 5.5)
             {
-                AddReward(-1f);
+                SetReward(-1f);
                 Done();
                 return;
             }
@@ -164,7 +164,7 @@ public class NPCMove : TacticsMove
 
                 if (System.Math.Abs(Vector3.Distance(a, b)) < 0.1)
                 {
-                    AddReward(-1f);
+                    SetReward(-1f);
                     Done();
                     return;
                 }

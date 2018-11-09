@@ -139,7 +139,7 @@ public class PlayerMove : TacticsMove
         {
             if (this.transform.position.x < -5.5 || this.transform.position.x > 5.5 || this.transform.position.z < -5.5 || this.transform.position.z > 5.5)
             {
-                AddReward(-1f);
+                SetReward(-1f);
                 Done();
                 return;
             }
@@ -184,7 +184,7 @@ public class PlayerMove : TacticsMove
 
                 if (System.Math.Abs(Vector3.Distance(a, b)) < 0.1)
                 {
-                    AddReward(-1f);
+                    SetReward(-1f);
                     Done();
                     return;
                 }
@@ -194,7 +194,7 @@ public class PlayerMove : TacticsMove
             //reaches goals
             if (System.Math.Abs(last_dist) < 0.1)
             {
-                AddReward(1f);
+                SetReward(1f);
                 Done();
                 return;
             }
