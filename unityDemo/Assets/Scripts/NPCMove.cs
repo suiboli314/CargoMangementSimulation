@@ -12,6 +12,7 @@ public class NPCMove : TacticsMove
     float net_dist_ratio = 1;
 
     EscapeAcademy academy;
+    GameObject map;
     GameObject player;
     GameObject npc;
     GameObject curgoal;
@@ -37,8 +38,8 @@ public class NPCMove : TacticsMove
         academy = FindObjectOfType<EscapeAcademy>();
         player = gameObject;
         npc = GameObject.FindGameObjectWithTag("NPC");
-
         goals = GameObject.FindGameObjectsWithTag("Goal");
+        //map = GameObject.FindGameObjectWithTag("map");
 
         goalSeq = pickOne();
 
@@ -53,16 +54,38 @@ public class NPCMove : TacticsMove
 
     protected int[] pickOne()
     {
-        int[] g = new int[3];
-        int v = Random.Range(0, 2);
+        int[] g = {-1, -1, -1};
+        //int v = Random.Range(0, 2);
 
-        for(int i = 0; i < 3; i++)
+        //for(int i = 0; i < 3; i++)
+        //{
+        //    if (i == v)
+        //        g[i] = 0;
+        //    else
+        //        g[i] = -1;
+        //} 
+
+        //Should intelligently choose one goal
+        float goalXNPC;
+        float goalZNPC;
+        float manhattan;
+        float man_temp = 100f;
+        int i = 0;
+        int target_i = 0;
+
+        foreach (GameObject goal in goals)
         {
-            if (i == v)
-                g[i] = 0;
-            else
-                g[i] = -1;
-        } 
+            goalXNPC = goal.transform.position.x - this.transform.position.x;
+            goalZNPC = goal.transform.position.z - this.transform.position.z;
+            manhattan = Mathf.Abs(Mathf.Round(goalXNPC)) + Mathf.Abs(Mathf.Round(goalZNPC));
+
+            if (manhattan < man_temp)
+                target_i = i;
+
+            i++;
+        }
+
+        g[target_i] = 0;
 
         return g;
     }
@@ -121,28 +144,43 @@ public class NPCMove : TacticsMove
 
     public override void CollectObservations()
     {
-        // Self position
-        AddVectorObs(this.transform.position.x);
-        AddVectorObs(this.transform.position.z);
+        //// Self position, didn't add?
+        //float NPCx = this.transform.position.x - map.transform.position.x;
+        //float NPCz = this.transform.position.z - map.transform.position.z;
 
-        // isGoalSelected
-        foreach (int i in goalSeq)
-        {
-            AddVectorObs(i);
-        }
-        // Add A* distances to the goal
-        foreach (GameObject obj in goals)
-        {
-            AddVectorObs(A_Star(obj));
-        }
-        // is Goal reached
-        foreach (bool x in isGoalReached)
-        {
-            if (x)
-                AddVectorObs(1f);
-            else
-                AddVectorObs(0f);
-        }
+        // player NPC vector
+        float goalXNPC = curgoal.transform.position.x - this.transform.position.x;
+        float goalZNPC = curgoal.transform.position.z - this.transform.position.z;
+
+
+
+        float manhattan = Mathf.Abs(Mathf.Round(goalXNPC)) + Mathf.Abs(Mathf.Round(goalZNPC));
+
+        AddVectorObs(goalXNPC);
+        AddVectorObs(goalZNPC);
+        AddVectorObs(manhattan);
+
+
+        //AddVectorObs(this.transform.position.x);
+
+        //// isGoalSelected
+        //foreach (int i in goalSeq)
+        //{
+        //    AddVectorObs(i);
+        //}
+        //// Add A* distances to the goal
+        //foreach (GameObject obj in goals)
+        //{
+        //    AddVectorObs(A_Star(obj));
+        //}
+        //// is Goal reached
+        //foreach (bool x in isGoalReached)
+        //{
+        //    if (x)
+        //        AddVectorObs(1f);
+        //    else
+        //        AddVectorObs(0f);
+        //}
     }
 
 
@@ -168,6 +206,19 @@ public class NPCMove : TacticsMove
         }
     }
 
+    public bool checkObs(Vector3 change)
+    {
+        RaycastHit hit;
+        Physics.Raycast(transform.position + change + new Vector3(0, 1, 0), -Vector3.up, out hit, 1f);
+
+        if (hit.collider != null && hit.collider.CompareTag("Obstacle"))
+        {
+            return true;
+        }
+
+        return false;
+    }
+
     public override void AgentAction(float[] vectorAction, string textAction)
     {
         if (!turn)
@@ -178,7 +229,7 @@ public class NPCMove : TacticsMove
             moving = true;
             if (this.transform.position.x < -5.5 || this.transform.position.x > 5.5 || this.transform.position.z < -5.5 || this.transform.position.z > 5.5)
             {
-                SetReward(-1f);
+                AddReward(-1f);
                 Done();
                 return;
             }
@@ -192,7 +243,8 @@ public class NPCMove : TacticsMove
             net_dist_ratio = -curdistance / last_dist;
             last_dist = curdistance;
 
-            AddReward(0.8f * net_dist_change / 13 + 0.2f * Mathf.Exp(net_dist_ratio));
+            AddReward(0.4f * net_dist_change);
+            //AddReward(0.8f * net_dist_change / 13 + 0.2f * Mathf.Exp(net_dist_ratio));
 
             ////punishment for reaching too close to player
             //if (Vector3.Distance(npc.transform.position, this.transform.position) <= 2)
@@ -213,32 +265,32 @@ public class NPCMove : TacticsMove
 
                 if (System.Math.Abs(Vector3.Distance(a, b)) < 0.1)
                 {
-                    SetReward(-1f);
-                    Done();
-                    return;
+                    AddReward(-1f);
+                    //Done();
+                    //return;
                 }
             }
 
             //reaches goals
-            if (Vector3.Distance(transform.position, curgoal.transform.position) < 0.1)
+            if (Vector3.Distance(transform.position, curgoal.transform.position) <= 1.1f)
             {
-                SetReward(1f);
+                AddReward(1f);
                 bool done = true;
-                for (int i = 0; i < 3; i++)
-                {
-                    if (goalSeq[i] == 0) //For current goal
-                    {
-                        isGoalReached[i] = true; //Set current goal to be "reached"
-                        goalSeq[i] = -1; //Remove the goal from available goals
-                    }
+                //for (int i = 0; i < 3; i++)
+                //{
+                //    if (goalSeq[i] == 0) //For current goal
+                //    {
+                //        isGoalReached[i] = true; //Set current goal to be "reached"
+                //        goalSeq[i] = -1; //Remove the goal from available goals
+                //    }
 
-                    if (goalSeq[i] == 1)  //For next goal
-                    {
-                        goalSeq[i] = 0;
-                        curgoal = goals[i]; //Set next goal to current goal
-                        done = false;
-                    }
-                }
+                //    if (goalSeq[i] == 1)  //For next goal
+                //    {
+                //        goalSeq[i] = 0;
+                //        curgoal = goals[i]; //Set next goal to current goal
+                //        done = false;
+                //    }
+                //}
                 if (done)
                 {
                     Done(); //if there is no further goal to reach
@@ -247,7 +299,7 @@ public class NPCMove : TacticsMove
             }
 
             // Time penalty
-            AddReward(-0.005f);
+            AddReward(-0.0005f);
 
             //Action
             int movement = Mathf.FloorToInt(vectorAction[0]);
@@ -258,7 +310,16 @@ public class NPCMove : TacticsMove
             if (movement == 2) { change = new Vector3(0, 0, -1); }
             if (movement == 3) { change = new Vector3(0, 0, 1); }
 
-            nextTile.position += change;
+            //Check if next step is moving out
+            if (this.transform.position.x + change.x < -5.5 || this.transform.position.x + change.x > 5.5 || this.transform.position.z + change.z < -5.5 || this.transform.position.z + change.z > 5.5)
+            {
+                AddReward(-1f);
+                return;
+            }
+
+            //Check if next step is obstacle
+            if (!checkObs(change)) { nextTile.position += change; }
+            else { AddReward(-1f); }
         }
     }
 }
