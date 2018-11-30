@@ -35,7 +35,7 @@ public class PlayerMove : TacticsMove
     public override void InitializeAgent()
     {
         academy = FindObjectOfType<EscapeAcademy>();
-        player = gameObject;
+        player = GameObject.FindGameObjectWithTag("Player");
         npc = GameObject.FindGameObjectWithTag("NPC");
         //map = GameObject.FindGameObjectWithTag("map");
         goals = GameObject.FindGameObjectsWithTag("Goal");
@@ -81,6 +81,8 @@ public class PlayerMove : TacticsMove
             if (manhattan < man_temp)
                 target_i = i;
 
+            if (goal.name.Equals("Goal2")) { target_i = i; }
+
             i++;
         }
 
@@ -114,7 +116,7 @@ public class PlayerMove : TacticsMove
 
 
  
-    void Update()
+    void FixedUpdate()
     {
         if (!turn)
             return;
@@ -258,7 +260,7 @@ public class PlayerMove : TacticsMove
     public bool checkObs(Vector3 change)
     {
         RaycastHit hit;
-        Physics.Raycast(transform.position + change + new Vector3(0, 1, 0), -Vector3.up, out hit, 1f);
+        Physics.Raycast(transform.position + change + new Vector3(0, 1f, 0), -Vector3.up, out hit, 1f);
 
         if (hit.collider != null && hit.collider.CompareTag("Obstacle"))
         {
@@ -320,7 +322,7 @@ public class PlayerMove : TacticsMove
             }
 
             //reaches goals
-            if (Vector3.Distance(transform.position, curgoal.transform.position) < 1.1f)
+            if (Vector3.Distance(transform.position, curgoal.transform.position) <= 0.25f)
             {
                 AddReward(1f);
                 bool done = true;
@@ -345,6 +347,17 @@ public class PlayerMove : TacticsMove
                     return;
                 }
             }
+
+            // Meet NPC
+            float distoplayer = Vector3.Distance(transform.position, npc.transform.position);
+            if (distoplayer <= 3f)
+            {
+                AddReward(1 / 4 * distoplayer);
+                // If the distance == 1
+                if (System.Math.Abs(distoplayer - 1) < 0.01) { AddReward(1); Done(); return; }
+
+            }
+
 
             // Time penalty
             AddReward(-0.0005f);

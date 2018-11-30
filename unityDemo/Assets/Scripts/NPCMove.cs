@@ -36,7 +36,7 @@ public class NPCMove : TacticsMove
         Init();
 
         academy = FindObjectOfType<EscapeAcademy>();
-        player = gameObject;
+        player = GameObject.FindGameObjectWithTag("Player");
         npc = GameObject.FindGameObjectWithTag("NPC");
         goals = GameObject.FindGameObjectsWithTag("Goal");
         //map = GameObject.FindGameObjectWithTag("map");
@@ -82,6 +82,8 @@ public class NPCMove : TacticsMove
             if (manhattan < man_temp)
                 target_i = i;
 
+            if (goal.name.Equals("Goal2")) { target_i = i; }
+
             i++;
         }
 
@@ -113,7 +115,7 @@ public class NPCMove : TacticsMove
         return g;
     }
 
-    void Update()
+    void FixedUpdate()
     {
         if (!turn)
             return;
@@ -209,7 +211,7 @@ public class NPCMove : TacticsMove
     public bool checkObs(Vector3 change)
     {
         RaycastHit hit;
-        Physics.Raycast(transform.position + change + new Vector3(0, 1, 0), -Vector3.up, out hit, 1f);
+        Physics.Raycast(transform.position + change + new Vector3(0, 1f, 0), -Vector3.up, out hit, 1f);
 
         if (hit.collider != null && hit.collider.CompareTag("Obstacle"))
         {
@@ -235,7 +237,7 @@ public class NPCMove : TacticsMove
             }
 
             FindSelectableTiles();
-            isRobReachGoal(player);
+            //isRobReachGoal(player);
 
             //Update varibles taken for reward function
             int curdistance = A_Star(curgoal);
@@ -272,7 +274,7 @@ public class NPCMove : TacticsMove
             }
 
             //reaches goals
-            if (Vector3.Distance(transform.position, curgoal.transform.position) <= 1.1f)
+            if (Vector3.Distance(transform.position, curgoal.transform.position) <= 0.25f)
             {
                 AddReward(1f);
                 bool done = true;
@@ -296,6 +298,16 @@ public class NPCMove : TacticsMove
                     Done(); //if there is no further goal to reach
                     return;
                 }
+            }
+
+            // Meet player
+            float distoplayer = Vector3.Distance(transform.position, player.transform.position);
+            if ( distoplayer <= 3f)
+            {
+                AddReward( -1/ 4 * distoplayer);
+                // If the distance == 1
+                if (System.Math.Abs(distoplayer - 1) < 0.01) { AddReward(-1); Done(); return; }
+
             }
 
             // Time penalty
